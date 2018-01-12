@@ -1,0 +1,14 @@
+{
+  "name": "graphql-example",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:0-to-1/graphql-example.git",
+  "dependencies": {
+    "express": "^4.16.2",
+    "express-graphql": "^0.6.11",
+    "graphql": "^0.12.3",
+    "node-fetch": "^1.7.3",
+    "xml2js": "^0.4.19"
+  },
+  "license": "MIT"
+}
