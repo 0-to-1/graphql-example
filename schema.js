@@ -1,5 +1,3 @@
-const fetch = require('node-fetch');
-const util = require('util');
 const {
   GraphQLSchema,
   GraphQLObjectType,
@@ -7,9 +5,6 @@ const {
   GraphQLString,
   GraphQLList
 } = require('graphql');
-const parseXML = util.promisify(require('xml2js').parseString);
-
-const GOOD_READS_API = process.env.GOOD_READS_API;
 
 const BookType = new GraphQLObjectType({
   name: 'Book',
@@ -23,6 +18,14 @@ const BookType = new GraphQLObjectType({
     isbn: {
       type: GraphQLString,
       resolve: xml => xml.isbn[0]
+    },
+    authors: {
+      type: new GraphQLList(AuthorType),
+      resolve: (xml, args, context) => {
+        const authorElements = xml.authors[0].author;
+        const ids = authorElements.map(elem => elem.id[0]);
+        return context.authorLoader.loadMany(ids);
+      }
     }
   })
 });
@@ -38,20 +41,9 @@ const AuthorType = new GraphQLObjectType({
     },
     books: {
       type: new GraphQLList(BookType),
-      resolve: xml => {
+      resolve: (xml, args, context) => {
         const ids = xml.books[0].book.map(elem => elem.id[0]._);
-        return Promise.all(
-          ids.map(id =>
-            fetch(
-              `https://www.goodreads.com/book/show/${id}.xml?key=${
-                GOOD_READS_API
-              }`
-            )
-              .then(response => response.text())
-              .then(parseXML)
-              .then(xml => xml.GoodreadsResponse.book[0])
-          )
-        );
+        return context.bookLoader.loadMany(ids);
       }
     }
   })
@@ -68,15 +60,7 @@ module.exports = new GraphQLSchema({
         args: {
           id: { type: GraphQLInt }
         },
-        resolve: (root, args) =>
-          fetch(
-            `https://www.goodreads.com/author/show.xml?id=${args.id}&key=${
-              GOOD_READS_API
-            }`
-          )
-            .then(response => response.text())
-            .then(parseXML)
-            .then(xml => xml.GoodreadsResponse.author[0])
+        resolve: (root, args, context) => context.authorLoader.load(args.id)
       }
     })
   })
